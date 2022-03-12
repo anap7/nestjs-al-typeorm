@@ -1,73 +1,60 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CreateCourseDto } from './dto/create-course.dto';
+import { UpdateCourseDto } from './dto/update-course.dto';
 import { Course } from './entities/course.entity';
 
 @Injectable()
 export class CoursesService {
-  priv
-  private courses: Course[] = [
-    {
-      id: 12,
-      name: "Fundamentos do Fremework NestJS",
-      description: "Explicando os Fundamentos do Fremework NestJS",
-      price: 10,
-      tags: ["node.js", "nest.js", "javascript"]
-    },
-    {
-      id: 33,
-      name: 'Curso Java',
-      description: "Explicando os Fundamentos do Fremework NestJS",
-      price: 10,
-      tags: ["node.js", "nest.js", "javascript"]
-    },
-    {
-      id: 22,
-      name: 'Curso PHP',
-      description: "Explicando os Fundamentos do Fremework NestJS",
-      price: 10,
-      tags: ["node.js", "nest.js", "javascript"]
-    }
-  ];
+  constructor(
+    @InjectRepository(Course)
+    private readonly courseRepository: Repository<Course>
+  ) {}
 
   findAll() {
-    return this.courses;
+    return this.courseRepository.find();
   }
 
   findOne(id: string) {
     //A função Number() é uma função nativa do Nest para converter uma variável para um número
-    const course = this.courses.find((course: Course) => course.id === Number(id));
+    const course = this.courseRepository.findOne(id);
 
     if (!course) {
-      throw new HttpException(
-        `Course ID ${id} was not found!`,
-         HttpStatus.NOT_FOUND
-      );
+      throw new NotFoundException(`Course ID ${id} was not found!`,);
     }
 
     return course;
   }
 
-  create(createCourseDto: any) {
-    this.courses.push(createCourseDto);
-    return createCourseDto;
+  create(createCourseDto: CreateCourseDto) {
+    const newCourse = this.courseRepository.create(createCourseDto);
+    console.log("... Salvando o curso");
+    console.log(newCourse);
+    return this.courseRepository.save(newCourse);
   }
 
-  update(id: string, updateCourseDto: any) {
-    const indexCourse = this.courses.findIndex(
-      //A função Number() é uma função nativa do Nest para converter uma variável para um número
-      (course) => course.id === Number(id),
-    );
+  async update(id: string, updateCourseDto: UpdateCourseDto) {
+    //Pré-carrega o objeto com as informações - Pega o objeto
+    const course = await this.courseRepository.preload({
+      id: +id, //Convertendo para número
+      ...updateCourseDto
+    });
 
-    this.courses[indexCourse] = updateCourseDto;
-  }
-
-  remove(id: string) {
-    const indexCourse = this.courses.findIndex(
-      //A função Number() é uma função nativa do Nest para converter uma variável para um número
-      (course) => course.id === Number(id),
-    );
-
-    if (indexCourse >= 0) {
-      this.courses.splice(indexCourse, 1);
+    if (!course) {
+      throw new NotFoundException(`Não foi possível atualizar os seus dados. O Course ID #${id} não foi encontrado`);
     }
+
+    return this.courseRepository.save(course);
+  }
+
+  async remove(id: string) {
+    const course = await this.courseRepository.findOne(id);
+
+    if (!course) {
+      throw new NotFoundException(`Course ID ${id} not found`);
+    }
+
+    return this.courseRepository.remove(course);
   }
 }
