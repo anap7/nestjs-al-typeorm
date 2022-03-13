@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Tag } from "./tag.entity";
 
 //Dentro do parâmetro Entity você pode definir o nome da tabela 
 @Entity('courses')
@@ -16,8 +17,12 @@ export class Course {
   @Column()
   price: number;
 
-  /*Como as tags é um array, vamos passar um objeto para o banco 
-  e caso seja nulo o banco não retornara erros */
-  @Column('json', { nullable: true})
-  tags: string[];
+  //Criando um relacionamento com a tabela/entidade Tag
+  @JoinTable()
+  //Mostrando que essa propriedade tem relacionamento com a tabela TAG
+  /*Primeiro parâmetro é indicar que a entidade desse relacionamento e o segundo qual é a 
+  propriedade (foreign key) que está entre o relacionamento*/
+  //Relacionamento de muitos para muitos para a tabela Course
+  @ManyToMany(() => Tag, (tag: Tag) => tag.courses, { cascade: true })
+  tags?: Tag[];
 }
